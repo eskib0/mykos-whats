@@ -1,66 +1,32 @@
 // connection-watchdog.js - Monitor de conexión para WhatsApp Web
+// Usa navigator.onLine + detección del estado en el DOM de WhatsApp.
+// No se parchea WebSocket: la inyección tardía no afecta a sockets ya
+// creados por el bundle de WhatsApp ni a los que vivan en Workers.
 (function() {
     'use strict';
 
     console.log('[connection-watchdog] Inicializando monitor de conexión...');
 
-    let lastStatus = null;
+    let lastStatus = navigator.onLine ? 'online' : 'offline';
     let reconnectAttempts = 0;
     const MAX_RECONNECT_ATTEMPTS = 5;
 
-    // Parchear WebSocket para detectar caídas
-    const OriginalWebSocket = window.WebSocket;
-
-    window.WebSocket = function(url, protocols) {
-        const ws = new OriginalWebSocket(url, protocols);
-
-        ws.addEventListener('close', (event) => {
-            console.warn('[connection-watchdog] WebSocket cerrado:', event.code, event.reason);
-            handleConnectionLoss();
-        });
-
-        ws.addEventListener('error', (event) => {
-            console.error('[connection-watchdog] WebSocket error:', event);
-            handleConnectionLoss();
-        });
-
-        ws.addEventListener('open', () => {
-            console.log('[connection-watchdog] WebSocket abierto');
-            reconnectAttempts = 0; // Resetear intentos al reconectar
-        });
-
-        return ws;
-    };
-
-    // Monitor de estado de conexión del navegador
-    function checkConnectionStatus() {
-        const online = navigator.onLine;
-        const status = online ? 'online' : 'offline';
-
-        if (status !== lastStatus) {
-            console.log('[connection-watchdog] Cambio de estado:', status);
-            lastStatus = status;
-
-            if (!online) {
-                showOfflineBanner();
-            } else {
-                hideOfflineBanner();
-                // Si estábamos desconectados, intentar reconectar
-                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
-                    attemptReconnect();
-                }
-            }
+    // Detectar si WhatsApp muestra pantalla de "conectando" / error de conexión
+    function isWhatsAppDisconnected() {
+        if (!navigator.onLine) return true;
+        const alertEl = document.querySelector('[data-testid="alert-phone"], [data-icon="alert-phone"], [data-testid="banner"], div[role="alert"]');
+        if (alertEl && /conectando|connecting|reintentar|retry|sin conexión|check your phone|phone not connected/i.test(alertEl.textContent)) {
+            return true;
         }
-
-        return status;
+        return false;
     }
 
     // Mostrar banner de desconexión (estilo MyKOS)
     function showOfflineBanner() {
-        let banner = document.getElementById('whatsie-offline-banner');
+        let banner = document.getElementById('mykos-whats-offline-banner');
         if (!banner) {
             banner = document.createElement('div');
-            banner.id = 'whatsie-offline-banner';
+            banner.id = 'mykos-whats-offline-banner';
             banner.style.cssText = `
                 position: fixed; top: 0; left: 0; right: 0;
                 background: #ef4444; color: #f4f8ff; text-align: center;
@@ -77,15 +43,49 @@
 
     // Ocultar banner de desconexión
     function hideOfflineBanner() {
-        const banner = document.getElementById('whatsie-offline-banner');
+        const banner = document.getElementById('mykos-whats-offline-banner');
         if (banner) banner.style.display = 'none';
     }
 
-    // Intentar reconectar
+    // Intentar reconectar con backoff exponencial y solo si WhatsApp sigue caído.
+    // Evita cortar chats o llamadas recargando en cada parpadeo de la conexión.
     function attemptReconnect() {
+        if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+            console.warn('[connection-watchdog] Máximo de intentos alcanzado');
+            return;
+        }
         reconnectAttempts++;
-        console.log('[connection-watchdog] Intento de reconexión:', reconnectAttempts);
-        window.location.reload();
+        const delay = Math.min(5000 * reconnectAttempts, 30000);
+        console.log('[connection-watchdog] Reconexión programada en ' + delay + 'ms (intento ' + reconnectAttempts + ')');
+        setTimeout(() => {
+            if (navigator.onLine && isWhatsAppDisconnected()) {
+                console.log('[connection-watchdog] WhatsApp sigue desconectado, recargando...');
+                window.location.reload();
+            } else {
+                // La conexión volvió por su cuenta
+                reconnectAttempts = 0;
+            }
+        }, delay);
+    }
+
+    // Monitor de estado de conexión del navegador
+    function checkConnectionStatus() {
+        const online = navigator.onLine;
+        const status = online ? 'online' : 'offline';
+
+        if (status !== lastStatus) {
+            console.log('[connection-watchdog] Cambio de estado:', status);
+            lastStatus = status;
+
+            if (!online) {
+                showOfflineBanner();
+            } else {
+                hideOfflineBanner();
+                attemptReconnect();
+            }
+        }
+
+        return status;
     }
 
     // Escuchar eventos de conexión del navegador
@@ -103,6 +103,9 @@
     setInterval(checkConnectionStatus, 5000);
 
     // Estado inicial
+    if (!navigator.onLine) {
+        showOfflineBanner();
+    }
     checkConnectionStatus();
 
     console.log('[connection-watchdog] Monitor de conexión activado');

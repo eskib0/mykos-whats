@@ -1,11 +1,73 @@
-// file-drop.js - Soporte para arrastrar y soltar archivos
+// file-drop.js - Soporte mejorado para arrastrar y soltar archivos
+// Usa MutationObserver para detectar inputs de WhatsApp Web dinámicos
 (function() {
     'use strict';
 
-    console.log('[file-drop] Inicializando soporte de arrastre...');
+    console.log('[file-drop] Inicializando soporte de arrastre (v2 con MutationObserver)...');
 
+    let targetInput = null;
+    let observer = null;
+
+    // Buscar el input de archivos correcto en WhatsApp Web
+    function findTargetInput() {
+        const inputs = document.querySelectorAll('input[type="file"]');
+        
+        for (const input of inputs) {
+            if (input.accept && input.accept.includes('image')) {
+                return input;
+            }
+        }
+
+        // Fallback: buscar cualquier input visible
+        for (const input of inputs) {
+            const rect = input.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+                return input;
+            }
+        }
+
+        return null;
+    }
+
+    // Buscar o actualizar el target input bajo demanda (en drag o drop)
+    function getTargetInput() {
+        if (targetInput && document.body.contains(targetInput)) {
+            return targetInput;
+        }
+        targetInput = findTargetInput();
+        return targetInput;
+    }
+
+    // Inyectar un archivo en el input de WhatsApp Web
+    async function injectFileToWhatsApp(file) {
+        const input = getTargetInput();
+        if (!input) {
+            console.warn('[file-drop] No se encontró input de archivo disponible');
+            return;
+        }
+
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        
+        // Usar Object.defineProperty para asignar files (en WA Web es necesario)
+        Object.defineProperty(input, 'files', {
+            writable: true,
+            value: dataTransfer.files
+        });
+
+        // Disparar eventos en el orden correcto
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+
+        console.log('[file-drop] Archivo inyectado:', file.name);
+    }
+
+    // Inicializar listeners de drag & drop
     function initFileDrop() {
-        // Escuchar eventos de drop en toda la ventana
+        window.addEventListener('dragenter', () => {
+            getTargetInput();
+        });
+
         window.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -25,7 +87,6 @@
             const files = Array.from(e.dataTransfer.files);
             console.log('[file-drop] Archivos detectados:', files.map(f => f.name));
 
-            // Procesar cada archivo
             for (const file of files) {
                 try {
                     await injectFileToWhatsApp(file);
@@ -36,44 +97,6 @@
         });
     }
 
-    async function injectFileToWhatsApp(file) {
-        // Buscar el campo de entrada de archivos de WhatsApp Web
-        const fileInputs = document.querySelectorAll('input[type="file"]');
-        let targetInput = null;
-
-        for (const input of fileInputs) {
-            if (input.accept && input.accept.includes('image')) {
-                targetInput = input;
-                break;
-            }
-        }
-
-        // Si no encontramos input específico, buscar cualquiera visible
-        if (!targetInput) {
-            for (const input of fileInputs) {
-                if (input.offsetParent !== null) {
-                    targetInput = input;
-                    break;
-                }
-            }
-        }
-
-        if (targetInput) {
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            targetInput.files = dataTransfer.files;
-
-            // Disparar eventos
-            targetInput.dispatchEvent(new Event('change', { bubbles: true }));
-            targetInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-            console.log('[file-drop] Archivo inyectado en input:', file.name);
-            return;
-        }
-
-        console.warn('[file-drop] No se encontró input de archivo disponible');
-    }
-
     // Inicializar cuando el DOM esté listo
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initFileDrop);
@@ -81,5 +104,5 @@
         initFileDrop();
     }
 
-    console.log('[file-drop] Soporte de arrastre activado');
+    console.log('[file-drop] Soporte de arrastre activado (v2)');
 })();

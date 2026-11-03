@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script de compilación de MyKOS-Whast
+# Script de compilación de MyKOS-Whats
 
 set -e
 
@@ -8,7 +8,7 @@ cd "$SCRIPT_DIR"
 
 BUILD_DIR="build"
 
-echo "🔨 Compilando MyKOS-Whast..."
+echo "🔨 Compilando MyKOS-Whats..."
 
 # Crear directorio de build
 mkdir -p "$BUILD_DIR"
@@ -20,11 +20,11 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 # Compilar
 make -j$(nproc)
 
-echo "✅ ¡MyKOS-Whast compilado correctamente!"
-echo "📦 Binario en: $BUILD_DIR/MyKOS-Whast"
+echo "✅ ¡MyKOS-Whats compilado correctamente!"
+echo "📦 Binario en: $BUILD_DIR/MyKOS-Whats"
 echo ""
 echo "Para ejecutar:"
-echo "  ./build/MyKOS-Whast"
+echo "  ./build/MyKOS-Whats"
 echo ""
 echo "Para instalar (requiere sudo):"
 echo "  sudo make install"

@@ -1,18 +1,20 @@
-# MyKOS-Whast - Clon de WhatsApp para Linux
+# MyKOS-Whats — WhatsApp Web para Linux
 
-Una aplicación nativa de Qt6 que envuelve WhatsApp Web con características adicionales de seguridad y personalización.
+Aplicación nativa de Qt6 que envuelve WhatsApp Web con bloqueo local y personalización.
 
 ## 🚀 Características
 
-- **Lock Screen local:** Autenticación con passcode cifrado (PBKDF2-HMAC-SHA256, 10.000 iteraciones)
-- **Tema Claro/Oscuro:** Sincronizado automáticamente
-- **Privacidad:** Difuminado de mensajes no seleccionados
-- **Integración Linux:** Notificaciones nativas, autostart XDG
-- **Polyfills para Flatpak:** File drop, Service Worker recovery
+- **Pantalla de bloqueo local:** al arrancar con passcode configurado, el contenido queda oculto hasta introducirlo. Passcode cifrado con PBKDF2-HMAC-SHA256 (100.000 iteraciones; los passcodes antiguos de 10.000 se migran solos al cambiarlos).
+- **Bloqueo por inactividad:** configurable (1–60 min) y persistente entre sesiones.
+- **Bloqueo manual:** `Ctrl+L` o menú *Configuración → Bloquear ahora*.
+- **Tema oscuro MyKOS:** aplicado sobre WhatsApp Web (variables CSS + reglas de refuerzo).
+- **Watchdog de conexión:** banner offline y recarga con backoff exponencial solo si WhatsApp sigue desconectado.
+- **Polyfills:** arrastrar y soltar archivos (MutationObserver) y recuperación de Service Workers corruptos.
+- **Perfil persistente:** la sesión de WhatsApp sobrevive entre arranques.
 
 ## 🛠️ Requisitos
 
-- Qt 6.7+ (Qt 5.10+ para QPasswordDigestor)
+- Qt 6 (Core, Gui, Widgets, WebEngineWidgets, Network)
 - CMake 3.16+
 - GCC o Clang con soporte C++17
 
@@ -34,7 +36,7 @@ make -j$(nproc)
 ## ▶️ Ejecución
 
 ```bash
-./build/whatsie
+./build/MyKOS-Whats
 ```
 
 ## 📁 Estructura del Proyecto
@@ -50,11 +52,13 @@ whatsie/
     │   ├── app_lock.h
     │   └── app_lock.cpp
     ├── ui/
+    │   ├── lockoverlay.h
+    │   ├── lockoverlay.cpp
     │   ├── mainwindow.h
-    │   ├── mainwindow.cpp
-    │   └── MainWindow.html
+    │   └── mainwindow.cpp
     └── web/
         └── scripts/
+            ├── activity-tracker.js
             ├── connection-watchdog.js
             ├── file-drop.js
             ├── sw-recovery.js

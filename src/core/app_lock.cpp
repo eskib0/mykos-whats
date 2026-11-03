@@ -23,10 +23,13 @@ bool AppLock::loadConfig()
 
     m_hash = settings.value("hash").toByteArray();
     m_salt = settings.value("salt").toByteArray();
+    // Configs antiguas no guardaban "iterations": se asume el valor legacy (10k)
+    m_iterations = settings.value("iterations", LEGACY_ITERATIONS).toInt();
 
     if (m_hash.isEmpty() || m_salt.isEmpty()) {
         m_hash = QByteArray();
         m_salt = QByteArray();
+        m_iterations = HASH_ITERATIONS;
         m_unlocked = true;
 
         qDebug() << "Sin configuración previa. Modo desbloqueado por defecto.";
@@ -44,6 +47,7 @@ bool AppLock::saveConfig()
     settings.beginGroup("security");
     settings.setValue("hash", m_hash);
     settings.setValue("salt", m_salt);
+    settings.setValue("iterations", m_iterations);
     settings.endGroup();
     settings.sync();
 
@@ -61,15 +65,15 @@ bool AppLock::hasPasscode() const
     return !m_hash.isEmpty();
 }
 
-QByteArray AppLock::deriveHash(const QString &passcode, const QByteArray &salt) const
+QByteArray AppLock::deriveHash(const QString &passcode, const QByteArray &salt, int iterations) const
 {
     // PBKDF2 real con QPasswordDigestor (Qt 5.10+)
     return QPasswordDigestor::deriveKeyPbkdf2(
         QCryptographicHash::Sha256,
         passcode.toUtf8(),
         salt,
-        HASH_ITERATIONS,
-        salt.size() // longitud de clave = longitud del salt (16 bytes)
+        iterations,
+        32 // longitud de clave = 32 bytes (SHA-256)
     );
 }
 
@@ -89,7 +93,8 @@ void AppLock::setPasscode(const QString &passcode)
         reinterpret_cast<quint32*>(salt.data()), salt.size() / sizeof(quint32));
 
     m_salt = salt;
-    m_hash = deriveHash(passcode, m_salt);
+    m_iterations = HASH_ITERATIONS;
+    m_hash = deriveHash(passcode, m_salt, m_iterations);
 
     saveConfig();
     emit passcodeSet();
@@ -98,8 +103,15 @@ void AppLock::setPasscode(const QString &passcode)
 bool AppLock::verifyPasscode(const QString &passcode)
 {
     if (m_hash.isEmpty()) return true; // Sin passcode configurado
-    QByteArray test = deriveHash(passcode, m_salt);
-    return test == m_hash;
+    QByteArray test = deriveHash(passcode, m_salt, m_iterations);
+    // Comparación en tiempo constante para evitar ataques de temporización
+    if (test.size() != m_hash.size()) return false;
+    volatile quint8 diff = 0;
+    const int n = test.size();
+    for (int i = 0; i < n; ++i) {
+        diff |= static_cast<quint8>(test[i] ^ m_hash[i]);
+    }
+    return diff == 0;
 }
 
 void AppLock::unlock()

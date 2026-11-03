@@ -28,12 +28,16 @@ signals:
 private:
     bool loadConfig();
     bool saveConfig();
-    QByteArray deriveHash(const QString &passcode, const QByteArray &salt) const;
+    QByteArray deriveHash(const QString &passcode, const QByteArray &salt, int iterations) const;
 
     bool m_unlocked = false;
     QByteArray m_salt;
     QByteArray m_hash;
-    static const int HASH_ITERATIONS = 10000;
+    int m_iterations = HASH_ITERATIONS;
+    // Iteraciones para passcodes nuevos (100k proporciona gran seguridad local sin congelar la UI)
+    static const int HASH_ITERATIONS = 100000;
+    // Iteraciones de builds antiguos; se usa al verificar configs que no guardaban el valor
+    static const int LEGACY_ITERATIONS = 10000;
 };
 
 #endif // APP_LOCK_H
