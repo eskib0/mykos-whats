@@ -1,0 +1,10 @@
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/MyKOS-Whast.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/MyKOS-Whast_qmlimportscan.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/edit_cache.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/rebuild_cache.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/list_install_components.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/install.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/install/local.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/install/strip.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/MyKOS-Whast_autogen_timestamp_deps.dir
+/home/ruben/.mykos/workspace/whatsie/build/CMakeFiles/MyKOS-Whast_autogen.dir

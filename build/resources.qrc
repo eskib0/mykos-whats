@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/scripts">
+    <file alias="connection-watchdog.js">/home/ruben/.mykos/workspace/whatsie/src/web/scripts/connection-watchdog.js</file>
+    <file alias="file-drop.js">/home/ruben/.mykos/workspace/whatsie/src/web/scripts/file-drop.js</file>
+    <file alias="sw-recovery.js">/home/ruben/.mykos/workspace/whatsie/src/web/scripts/sw-recovery.js</file>
+    <file alias="theme-control.js">/home/ruben/.mykos/workspace/whatsie/src/web/scripts/theme-control.js</file>
+  </qresource>
+</RCC>

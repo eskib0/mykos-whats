@@ -1,0 +1,6 @@
+# Hashes of file build rules.
+0dfac8fe05716c4a99b89ba476b83d32 .qt_plugins/Qt6_QmlPlugins_Imports_MyKOS-Whast.cmake
+8ca93fd8460e07d7e7ec41a72410cbd2 CMakeFiles/MyKOS-Whast_autogen
+8ca93fd8460e07d7e7ec41a72410cbd2 CMakeFiles/MyKOS-Whast_autogen_timestamp_deps
+8ca93fd8460e07d7e7ec41a72410cbd2 CMakeFiles/MyKOS-Whast_qmlimportscan
+2391d86f238cb21ca641682ee9063a80 MyKOS-Whast_autogen/timestamp
