@@ -1,0 +1,47 @@
+# Build artifacts
+build/
+*.o
+*.moc
+*.moc.d
+moc_*.cpp
+moc_*.cpp.d
+moc_predefs.h
+mocs_compilation.cpp
+mocs_compilation.cpp.d
+deps
+timestamp
+PRMOGMWJPH/
+
+# Qt deploy
+.cmake/
+QtDeploySupport.cmake
+*.rsp
+*_qmlimportscan*
+*_qml_imports*
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+*.cmake.in
+CMakeLists.txt.user
+CMakeLists.txt.user.in
+
+# IDE
+.idea/
+.vscode/
+*.user
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.suo
+*.sdf
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
