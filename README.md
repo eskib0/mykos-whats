@@ -65,6 +65,10 @@ whatsie/
             └── theme-control.js
 ```
 
+## ⚖️ Aviso Legal (Disclaimer)
+
+Este proyecto es un cliente de escritorio no oficial basado en la interfaz web oficial de WhatsApp Web. No está afiliado, asociado, autorizado, respaldado ni conectado de ninguna manera oficial con WhatsApp LLC, Meta Platforms, Inc. o cualquiera de sus subsidiarias o filiales. El nombre *WhatsApp*, así como los nombres, marcas, insignias e imágenes relacionados son marcas registradas de sus respectivos propietarios.
+
 ## 📜 Licencia
 
 MIT
