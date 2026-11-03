@@ -1,9 +1,0 @@
--rootPath
-/home/ruben/.mykos/workspace/whatsie
--cmake-output
--output-file
-/home/ruben/.mykos/workspace/whatsie/build/.qt_plugins/Qt6_QmlPlugins_Imports_MyKOS-Whast.cmake
--importPath
-/home/ruben/.mykos/workspace/whatsie/build
--importPath
-/usr/lib/x86_64-linux-gnu/qt6/qml
