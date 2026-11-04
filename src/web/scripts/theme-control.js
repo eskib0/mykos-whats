@@ -144,32 +144,11 @@
     function init() {
         applyTheme();
 
-        const root = document.documentElement;
-        if (root) {
-            let isApplying = false;
-            const observer = new MutationObserver(() => {
-                if (isApplying) return;
-                if (currentTheme !== 'whatsapp-light') {
-                    const isDark = document.documentElement.classList.contains('dark');
-                    if (!isDark) {
-                        isApplying = true;
-                        applyTheme();
-                        isApplying = false;
-                    }
-                }
-            });
-
-            observer.observe(root, {
-                attributes: true,
-                attributeFilter: ['class']
-            });
-        }
-
         window.MyKOSTheme = {
             setTheme: applyTheme,
             forceTheme: () => applyTheme(),
             getTheme: () => currentTheme,
-            version: '2026.11.04-mykos-v5'
+            version: '2026.11.04-mykos-v6'
         };
     }
 
