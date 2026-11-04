@@ -9,10 +9,13 @@
 #include <QWebEngineSettings>
 #include <QTimer>
 #include <QSettings>
+#include <QSystemTrayIcon>
+#include <memory>
 #include "core/app_lock.h"
 
 class LockOverlay;
 class QStackedWidget;
+class QWebEngineNotification;
 
 class MainWindow : public QMainWindow
 {
@@ -35,9 +38,12 @@ private slots:
     void removePasscode();
     void tryUnlock(const QString &passcode);
     void setTheme(const QString &themeName);
+    void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
 
 private:
     void applyMyKOSPalette();
+    void initTrayIcon();
+    void handleWebNotification(std::unique_ptr<QWebEngineNotification> notification);
     void registerScript(const QString &name, const QString &resourcePath,
                         QWebEngineScript::InjectionPoint point = QWebEngineScript::DocumentReady);
     void injectScript(const QString &name, const QString &resourcePath);
@@ -68,6 +74,13 @@ private:
     QAction *m_actRemovePasscode = nullptr;
     QAction *m_actLockNow = nullptr;
     QAction *m_actAbout = nullptr;
+
+    // Bandeja del sistema y notificaciones
+    QSystemTrayIcon *m_trayIcon = nullptr;
+    QMenu *m_trayMenu = nullptr;
+    QAction *m_actTrayToggle = nullptr;
+    QAction *m_actTrayLock = nullptr;
+    std::shared_ptr<QWebEngineNotification> m_lastNotification;
 };
 
 #endif // MAINWINDOW_H

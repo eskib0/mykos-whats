@@ -20,7 +20,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 file(GLOB JS_SCRIPTS CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/web/scripts/*.js")
 list(SORT JS_SCRIPTS)
 
-# Generar el .qrc con los scripts en tiempo de configuración
+# Generar el .qrc con los scripts y recursos en tiempo de configuración
 set(RESOURCES_CONTENT "<RCC>\n  <qresource prefix=\"/web/scripts/\">\n")
 
 foreach(js_file ${JS_SCRIPTS})
@@ -28,6 +28,9 @@ foreach(js_file ${JS_SCRIPTS})
     set(RESOURCES_CONTENT "${RESOURCES_CONTENT}    <file alias=\"${js_name}\">${js_file}</file>\n")
 endforeach()
 
+set(RESOURCES_CONTENT "${RESOURCES_CONTENT}  </qresource>\n")
+set(RESOURCES_CONTENT "${RESOURCES_CONTENT}  <qresource prefix=\"/icons/\">\n")
+set(RESOURCES_CONTENT "${RESOURCES_CONTENT}    <file alias=\"app.png\">${CMAKE_SOURCE_DIR}/resources/icons/mykos-whats.png</file>\n")
 set(RESOURCES_CONTENT "${RESOURCES_CONTENT}  </qresource>\n</RCC>\n")
 file(WRITE "${CMAKE_BINARY_DIR}/resources.qrc" ${RESOURCES_CONTENT})
 

@@ -4,6 +4,7 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QBoxLayout>
+#include <QCheckBox>
 #include <QCloseEvent>
 #include <QColor>
 #include <QDateTime>
@@ -12,6 +13,7 @@
 #include <QDir>
 #include <QEvent>
 #include <QFile>
+#include <QIcon>
 #include <QInputDialog>
 #include <QKeySequence>
 #include <QLabel>
@@ -26,6 +28,7 @@
 #include <QUrl>
 #include <QVariant>
 #include <QWebEngineCookieStore>
+#include <QWebEngineNotification>
 #include <QWebEnginePermission>
 #include <QWebEngineScript>
 #include <QWebEngineScriptCollection>
@@ -35,6 +38,7 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     : QMainWindow(parent), m_lock(lock)
 {
     setWindowTitle("MyKOS-Whats");
+    setWindowIcon(QIcon(":/icons/app.png"));
     resize(1200, 800);
     applyMyKOSPalette();
 
@@ -45,6 +49,11 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     // Perfil web dedicado para persistir la sesión de WhatsApp
     m_profile = new QWebEngineProfile("mykos-whats-profile", this);
     m_profile->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);
+
+    // Integración de notificaciones nativas de escritorio
+    m_profile->setNotificationPresenter([this](std::unique_ptr<QWebEngineNotification> notif) {
+        handleWebNotification(std::move(notif));
+    });
 
     // User-Agent: WhatsApp Web bloquea explícitamente cadenas que contengan "QtWebEngine"
     // o versiones de Chromium antiguas (< 110). Se elimina QtWebEngine y se garantiza una versión moderna.
@@ -224,6 +233,14 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     connect(m_inactivityTimer, &QTimer::timeout, this, &MainWindow::checkInactivity);
     m_inactivityTimer->start();
 
+    // Conectar señales de AppLock para sincronizar estado de UI y bandeja
+    connect(m_lock, &AppLock::unlocked, this, &MainWindow::refreshLockState);
+    connect(m_lock, &AppLock::locked, this, &MainWindow::refreshLockState);
+    connect(m_lock, &AppLock::passcodeSet, this, &MainWindow::refreshLockState);
+
+    // Inicializar bandeja del sistema
+    initTrayIcon();
+
     // Si no hay passcode configurado, preguntar de forma opcional una sola vez
     bool askedPasscode = settings.value("security/askedInitialPasscode", false).toBool();
     if (!lock->hasPasscode() && !askedPasscode) {
@@ -267,13 +284,115 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    event->accept();
+    QSettings settings;
+    bool closeToTray = settings.value("ui/closeToTray", true).toBool();
+    if (closeToTray && m_trayIcon && m_trayIcon->isVisible()) {
+        hide();
+        event->ignore();
+        static bool informed = false;
+        if (!informed) {
+            m_trayIcon->showMessage("MyKOS-Whats",
+                                     "La aplicación sigue ejecutándose en segundo plano en la bandeja del sistema.",
+                                     QSystemTrayIcon::Information, 3000);
+            informed = true;
+        }
+    } else {
+        event->accept();
+    }
+}
+
+void MainWindow::initTrayIcon()
+{
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) return;
+
+    m_trayIcon = new QSystemTrayIcon(QIcon(":/icons/app.png"), this);
+    m_trayIcon->setToolTip("MyKOS-Whats");
+
+    m_trayMenu = new QMenu(this);
+    m_actTrayToggle = m_trayMenu->addAction("Mostrar / Ocultar");
+    connect(m_actTrayToggle, &QAction::triggered, this, [this]() {
+        if (isVisible() && !isMinimized()) {
+            hide();
+        } else {
+            showNormal();
+            raise();
+            activateWindow();
+        }
+    });
+
+    m_actTrayLock = m_trayMenu->addAction("Bloquear ahora");
+    connect(m_actTrayLock, &QAction::triggered, this, &MainWindow::lockNow);
+
+    m_trayMenu->addSeparator();
+
+    QAction *actTrayQuit = m_trayMenu->addAction("&Salir");
+    connect(actTrayQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+
+    m_trayIcon->setContextMenu(m_trayMenu);
+
+    connect(m_trayIcon, &QSystemTrayIcon::activated, this, &MainWindow::onTrayIconActivated);
+    connect(m_trayIcon, &QSystemTrayIcon::messageClicked, this, [this]() {
+        if (m_lastNotification) {
+            m_lastNotification->click();
+        }
+        showNormal();
+        raise();
+        activateWindow();
+    });
+
+    m_trayIcon->show();
+}
+
+void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
+{
+    if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
+        if (isVisible() && !isMinimized()) {
+            hide();
+        } else {
+            showNormal();
+            raise();
+            activateWindow();
+        }
+    }
+}
+
+void MainWindow::handleWebNotification(std::unique_ptr<QWebEngineNotification> notification)
+{
+    if (!notification) return;
+
+    std::shared_ptr<QWebEngineNotification> sharedNotif = std::move(notification);
+    m_lastNotification = sharedNotif;
+
+    connect(sharedNotif.get(), &QWebEngineNotification::closed, this, [this, sharedNotif]() {
+        if (m_lastNotification == sharedNotif) {
+            m_lastNotification.reset();
+        }
+    });
+
+    QString title = sharedNotif->title();
+    QString message = sharedNotif->message();
+
+    // Privacidad: si la aplicación está bloqueada, ocultar el remitente y cuerpo del mensaje
+    if (!m_lock->isUnlocked()) {
+        title = "WhatsApp Web";
+        message = "Nuevo mensaje recibido (contenido protegido por bloqueo)";
+    }
+
+    if (m_trayIcon && m_trayIcon->isVisible()) {
+        m_trayIcon->showMessage(title, message, QSystemTrayIcon::Information, 5000);
+    }
 }
 
 void MainWindow::refreshLockState()
 {
     m_stack->setCurrentWidget(m_lock->isUnlocked() ? static_cast<QWidget *>(m_webView)
                                                    : static_cast<QWidget *>(m_overlay));
+    const bool canLock = m_lock->hasPasscode() && m_lock->isUnlocked();
+    m_actLockNow->setEnabled(canLock);
+    m_actRemovePasscode->setEnabled(m_lock->hasPasscode());
+    if (m_actTrayLock) {
+        m_actTrayLock->setEnabled(canLock);
+    }
 }
 
 void MainWindow::tryUnlock(const QString &passcode)
@@ -378,6 +497,11 @@ void MainWindow::openSettingsDialog()
     spin->setSuffix(" min");
     layout->addWidget(spin);
 
+    QSettings initSettings;
+    QCheckBox *chkCloseToTray = new QCheckBox("Minimizar a la bandeja del sistema al cerrar", &dialog);
+    chkCloseToTray->setChecked(initSettings.value("ui/closeToTray", true).toBool());
+    layout->addWidget(chkCloseToTray);
+
     QDialogButtonBox *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     layout->addWidget(buttons);
 
@@ -388,7 +512,8 @@ void MainWindow::openSettingsDialog()
         m_inactivityTimeoutMs = spin->value() * 60000LL;
         QSettings settings;
         settings.setValue("ui/inactivityTimeoutMin", spin->value());
-        qDebug() << "[MainWindow] Timeout actualizado a" << spin->value() << "minutos";
+        settings.setValue("ui/closeToTray", chkCloseToTray->isChecked());
+        qDebug() << "[MainWindow] Opciones guardadas: timeout=" << spin->value() << "min, closeToTray=" << chkCloseToTray->isChecked();
     }
 }
 
