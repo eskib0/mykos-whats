@@ -65,6 +65,13 @@ whatsie/
             └── theme-control.js
 ```
 
+## 🔒 Modelo de Seguridad y Limitaciones
+
+- **Protección a nivel de UI:** La pantalla de bloqueo local y el temporizador de inactividad ocultan la interfaz para evitar miradas indiscretas o acceso casual no autorizado en el entorno físico del usuario.
+- **Protección contra fuerza bruta:** Emplea PBKDF2-HMAC-SHA256 (100.000 iteraciones, salt aleatorio de 16 bytes y comparación en tiempo constante) combinado con un bloqueo temporal (*rate limiting*) exponencial tras intentos fallidos consecutivos.
+- **Restablecimiento destructivo:** Si se restablece la contraseña desde la pantalla de bloqueo, se eliminan completamente las cookies, caché y datos del perfil de Chromium/QWebEngine, cerrando la sesión de WhatsApp para asegurar que un atacante físico no acceda a las conversaciones.
+- **Limitación en disco:** La sesión web y las cookies de QWebEngine se guardan en el directorio de usuario (`~/.config` y `~/.local/share`) según el comportamiento estándar de Chromium. Esta protección está diseñada como barrera visual/local y no sustituye al cifrado completo de disco (LUKS) ni protege frente a accesos directos al sistema de archivos con permisos de usuario o superusuario.
+
 ## ⚖️ Aviso Legal (Disclaimer)
 
 Este proyecto es un cliente de escritorio no oficial basado en la interfaz web oficial de WhatsApp Web. No está afiliado, asociado, autorizado, respaldado ni conectado de ninguna manera oficial con WhatsApp LLC, Meta Platforms, Inc. o cualquiera de sus subsidiarias o filiales. El nombre *WhatsApp*, así como los nombres, marcas, insignias e imágenes relacionados son marcas registradas de sus respectivos propietarios.
