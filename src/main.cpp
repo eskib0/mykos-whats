@@ -5,10 +5,11 @@
 
 int main(int argc, char *argv[])
 {
-    // Optimizar rendimiento de Chromium en Linux con aceleración por hardware
+    // Optimizar rendimiento de Chromium en Linux con NVIDIA:
+    // Deshabilitar Vulkan problemático en X11 para usar OpenGL/GLX acelerado por hardware
     if (qEnvironmentVariableIsEmpty("QTWEBENGINE_CHROMIUM_FLAGS")) {
         qputenv("QTWEBENGINE_CHROMIUM_FLAGS",
-                "--enable-gpu-rasterization --enable-zero-copy --disable-gpu-driver-bug-workarounds");
+                "--disable-features=Vulkan --enable-gpu-rasterization --enable-zero-copy");
     }
 
     QApplication app(argc, argv);

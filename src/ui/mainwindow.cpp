@@ -644,7 +644,7 @@ void MainWindow::registerScript(const QString &name, const QString &resourcePath
     script.setSourceCode(code);
     script.setInjectionPoint(point);
     script.setWorldId(QWebEngineScript::MainWorld);
-    script.setRunsOnSubFrames(true);
+    script.setRunsOnSubFrames(false);
 
     m_profile->scripts()->insert(script);
     qDebug() << "[MainWindow] Script registrado en perfil:" << name;
