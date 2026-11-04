@@ -57,6 +57,14 @@ install(TARGETS MyKOS-Whats
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+install(FILES data/mykos-whats.desktop
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/applications
+)
+
+install(FILES resources/icons/mykos-whats.png
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps
+)
+
 if(TARGET Qt6::Test)
     enable_testing()
     qt_add_executable(test_app_lock

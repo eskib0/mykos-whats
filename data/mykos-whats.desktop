@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=MyKOS-Whats
+GenericName=WhatsApp Client
+Comment=WhatsApp Web para Linux con pantalla de bloqueo y tema MyKOS
+Exec=MyKOS-Whats %u
+Icon=mykos-whats
+Terminal=false
+Categories=Network;InstantMessaging;Chat;
+Keywords=whatsapp;mensajes;chat;mykos;
+StartupWMClass=MyKOS-Whats
+MimeType=x-scheme-handler/whatsapp;
