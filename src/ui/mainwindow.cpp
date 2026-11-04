@@ -9,6 +9,7 @@
 #include <QDateTime>
 #include <QDebug>
 #include <QDialogButtonBox>
+#include <QDir>
 #include <QEvent>
 #include <QFile>
 #include <QInputDialog>
@@ -23,6 +24,7 @@
 #include <QStackedWidget>
 #include <QUrl>
 #include <QVariant>
+#include <QWebEngineCookieStore>
 #include <QWebEnginePermission>
 #include <QWebEngineScript>
 #include <QWebEngineScriptCollection>
@@ -92,14 +94,38 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     connect(m_overlay, &LockOverlay::unlockRequested, this, &MainWindow::tryUnlock);
     connect(m_overlay, &LockOverlay::resetRequested, this, [this]() {
         auto reply = QMessageBox::warning(this, "Restablecer contraseña",
-            "¿Has olvidado tu contraseña?\n\nAl restablecerla, se eliminará el bloqueo por contraseña y accederás a WhatsApp.",
+            "¿Has olvidado tu contraseña?\n\n"
+            "Por seguridad, restablecer la contraseña cerrará la sesión de WhatsApp y "
+            "eliminará todos los datos locales (cookies, caché y almacenamiento local).\n\n"
+            "Tendrás que volver a escanear el código QR para iniciar sesión.\n\n"
+            "¿Deseas continuar?",
             QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
         if (reply == QMessageBox::Yes) {
+            // Borrar cookies, historial, caché HTTP y almacenamiento persistente del perfil
+            if (m_profile) {
+                m_profile->clearAllVisitedLinks();
+                m_profile->clearHttpCache();
+                if (m_profile->cookieStore()) {
+                    m_profile->cookieStore()->deleteAllCookies();
+                }
+                const QString storagePath = m_profile->persistentStoragePath();
+                if (!storagePath.isEmpty() && QDir(storagePath).exists()) {
+                    QDir(storagePath).removeRecursively();
+                }
+                const QString cachePath = m_profile->cachePath();
+                if (!cachePath.isEmpty() && QDir(cachePath).exists()) {
+                    QDir(cachePath).removeRecursively();
+                }
+            }
             m_lock->setPasscode(QString());
             m_lock->unlock();
             refreshLockState();
             m_actRemovePasscode->setEnabled(false);
             m_actLockNow->setEnabled(false);
+            m_webView->setUrl(QUrl("https://web.whatsapp.com/"));
+            QMessageBox::information(this, "Contraseña restablecida",
+                "Se ha eliminado la contraseña y se ha cerrado la sesión de WhatsApp.\n"
+                "Escanea de nuevo el código QR para acceder.");
         }
     });
 
