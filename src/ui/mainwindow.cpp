@@ -230,7 +230,13 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 {
     Q_UNUSED(watched);
     switch (event->type()) {
-    case QEvent::MouseMove:
+    case QEvent::MouseMove: {
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        if (now - m_lastNativeActivity > 500) {
+            m_lastNativeActivity = now;
+        }
+        break;
+    }
     case QEvent::MouseButtonPress:
     case QEvent::MouseButtonRelease:
     case QEvent::KeyPress:
@@ -248,9 +254,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event)
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    if (m_lock && m_lock->hasPasscode()) {
-        m_lock->lock();
-    }
     event->accept();
 }
 
