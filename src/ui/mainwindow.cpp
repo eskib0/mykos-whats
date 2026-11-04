@@ -147,7 +147,8 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     setMenuBar(menuBar);
 
     QMenu *fileMenu = menuBar->addMenu("&Archivo");
-    QAction *actQuit = fileMenu->addAction("E&xit");
+    QAction *actQuit = fileMenu->addAction("&Salir");
+    actQuit->setShortcut(QKeySequence::Quit);
     connect(actQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
     // Menú Tema
