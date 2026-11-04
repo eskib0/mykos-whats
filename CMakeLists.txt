@@ -8,6 +8,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui WebEngineWidgets Widgets Network)
+find_package(Qt6 OPTIONAL_COMPONENTS Test)
 
 qt_standard_project_setup()
 
@@ -52,3 +53,18 @@ target_link_libraries(MyKOS-Whats PRIVATE
 install(TARGETS MyKOS-Whats
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+if(TARGET Qt6::Test)
+    enable_testing()
+    qt_add_executable(test_app_lock
+        tests/test_app_lock.cpp
+        src/core/app_lock.cpp
+        src/core/app_lock.h
+    )
+    target_link_libraries(test_app_lock PRIVATE
+        Qt::Core
+        Qt::Network
+        Qt::Test
+    )
+    add_test(NAME test_app_lock COMMAND test_app_lock)
+endif()
