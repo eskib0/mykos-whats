@@ -51,8 +51,13 @@ bool AppLock::saveConfig()
     settings.endGroup();
     settings.sync();
 
-    qDebug() << "Configuración guardada.";
-    return true;
+    bool ok = (settings.status() == QSettings::NoError);
+    if (!ok) {
+        qWarning() << "Error al guardar configuración de seguridad en QSettings:" << settings.status();
+    } else {
+        qDebug() << "Configuración guardada correctamente.";
+    }
+    return ok;
 }
 
 bool AppLock::isUnlocked() const
