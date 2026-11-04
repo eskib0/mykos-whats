@@ -9,69 +9,88 @@
         return;
     }
 
-    // Monitorear errores de Service Worker
-    navigator.serviceWorker.addEventListener('error', (event) => {
-        console.error('[sw-recovery] Error de Service Worker:', event);
-        recoverServiceWorker();
-    });
+    const RECOVERY_COOLDOWN_MS = 2 * 60 * 1000; // 2 minutos de enfriamiento para evitar bucles de recarga
 
-    // Verificar integridad del SW cada 30 segundos
-    setInterval(checkServiceWorkerIntegrity, 30 * 1000);
+    function canTriggerRecovery() {
+        try {
+            const last = parseInt(sessionStorage.getItem('mykos_sw_last_recovery') || '0', 10);
+            return (Date.now() - last) > RECOVERY_COOLDOWN_MS;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function recordRecovery() {
+        try {
+            sessionStorage.setItem('mykos_sw_last_recovery', String(Date.now()));
+        } catch (e) {}
+    }
+
+    // Verificar integridad del SW cada 45 segundos
+    setInterval(checkServiceWorkerIntegrity, 45 * 1000);
 
     async function checkServiceWorkerIntegrity() {
         try {
             const registrations = await navigator.serviceWorker.getRegistrations();
-            
+
             for (const registration of registrations) {
-                if (!registration.active && !registration.installing) {
-                    console.warn('[sw-recovery] Service Worker sin estado activo, desregistrando...');
-                    await registration.unregister();
-                    
-                    // Forzar recarga limpia
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                // Un Service Worker es válido si está activo, instalando O esperando activación (waiting).
+                // Solo se considera huérfano/corrupto si no tiene ningún worker en ninguna fase.
+                const hasWorker = registration.active || registration.installing || registration.waiting;
+                if (!hasWorker) {
+                    console.warn('[sw-recovery] Registro de Service Worker sin workers válidos detectado.');
+                    if (canTriggerRecovery()) {
+                        await recoverServiceWorker();
+                    } else {
+                        console.warn('[sw-recovery] Recuperación omitida: en periodo de enfriamiento anti-bucle.');
+                    }
                     return;
                 }
 
-                if (registration.active && registration.active.state !== 'activated') {
-                    console.warn('[sw-recovery] Service Worker en estado:', registration.active.state);
+                // Monitorear errores durante la instalación de nuevos workers
+                if (registration.installing) {
+                    registration.installing.addEventListener('error', (err) => {
+                        console.error('[sw-recovery] Error durante la instalación del Service Worker:', err);
+                    });
                 }
             }
         } catch (err) {
             console.error('[sw-recovery] Error verificando SW:', err);
-            recoverServiceWorker();
         }
     }
 
     async function recoverServiceWorker() {
-        console.log('[sw-recovery] Iniciando recuperación de Service Workers...');
-        
+        if (!canTriggerRecovery()) {
+            console.warn('[sw-recovery] Recuperación omitida por enfriamiento');
+            return;
+        }
+        recordRecovery();
+        console.log('[sw-recovery] Iniciando recuperación limpia de Service Workers...');
+
         try {
             const registrations = await navigator.serviceWorker.getRegistrations();
-            
             for (const registration of registrations) {
-                // Desregistrar todos los SWs de WhatsApp
-                if (registration.scope.includes('whatsapp') || 
-                    registration.scope.includes('web.whatsapp')) {
+                if (registration.scope.includes('whatsapp') || registration.scope.includes('web.whatsapp')) {
                     await registration.unregister();
                     console.log('[sw-recovery] Service Worker desregistrado:', registration.scope);
                 }
             }
 
-            // Limpiar caché relacionado
-            const cacheNames = await caches.keys();
-            for (const cacheName of cacheNames) {
-                if (cacheName.includes('whatsapp') || cacheName.includes('web.whatsapp')) {
-                    await caches.delete(cacheName);
-                    console.log('[sw-recovery] Caché eliminado:', cacheName);
+            // Limpiar caché relacionado de Service Worker
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                for (const cacheName of cacheNames) {
+                    if (cacheName.includes('whatsapp') || cacheName.includes('web.whatsapp')) {
+                        await caches.delete(cacheName);
+                        console.log('[sw-recovery] Caché eliminado:', cacheName);
+                    }
                 }
             }
 
-            // Forzar recarga limpia
+            // Forzar recarga limpia tras limpiar estado corrupto
             setTimeout(() => {
                 window.location.reload();
-            }, 2000);
+            }, 1500);
 
         } catch (err) {
             console.error('[sw-recovery] Error en recuperación:', err);
