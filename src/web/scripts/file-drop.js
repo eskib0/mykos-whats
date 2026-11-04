@@ -1,73 +1,74 @@
 // file-drop.js - Soporte mejorado para arrastrar y soltar archivos
-// Usa MutationObserver para detectar inputs de WhatsApp Web dinámicos
+// Soporta múltiples archivos simultáneos y distingue entre multimedia y documentos
 (function() {
     'use strict';
 
-    console.log('[file-drop] Inicializando soporte de arrastre (v2 con MutationObserver)...');
+    console.log('[file-drop] Inicializando soporte de arrastre de archivos...');
 
-    let targetInput = null;
-    let observer = null;
-
-    // Buscar el input de archivos correcto en WhatsApp Web
-    function findTargetInput() {
-        const inputs = document.querySelectorAll('input[type="file"]');
-        
-        for (const input of inputs) {
-            if (input.accept && input.accept.includes('image')) {
-                return input;
-            }
-        }
-
-        // Fallback: buscar cualquier input visible
-        for (const input of inputs) {
-            const rect = input.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-                return input;
-            }
-        }
-
-        return null;
+    function isMediaFile(file) {
+        if (!file || !file.type) return false;
+        return file.type.startsWith('image/') || file.type.startsWith('video/');
     }
 
-    // Buscar o actualizar el target input bajo demanda (en drag o drop)
-    function getTargetInput() {
-        if (targetInput && document.body.contains(targetInput)) {
-            return targetInput;
-        }
-        targetInput = findTargetInput();
-        return targetInput;
-    }
+    // Buscar el input de archivos adecuado según el tipo (multimedia vs documento)
+    function findTargetInput(isMedia) {
+        const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
+        if (inputs.length === 0) return null;
 
-    // Inyectar un archivo en el input de WhatsApp Web
-    async function injectFileToWhatsApp(file) {
-        const input = getTargetInput();
-        if (!input) {
-            console.warn('[file-drop] No se encontró input de archivo disponible');
-            return;
+        if (isMedia) {
+            // Input de fotos y vídeos (accept contiene "image" o "video")
+            const mediaInput = inputs.find(i => i.accept && (i.accept.includes('image') || i.accept.includes('video')));
+            if (mediaInput) return mediaInput;
+        } else {
+            // Input de documentos (accept="*" o no restringido exclusivamente a imágenes)
+            const docInput = inputs.find(i => !i.accept || i.accept === '*' || !i.accept.includes('image'));
+            if (docInput) return docInput;
         }
 
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        
-        // Usar Object.defineProperty para asignar files (en WA Web es necesario)
-        Object.defineProperty(input, 'files', {
-            writable: true,
-            value: dataTransfer.files
+        // Fallback: input con dimensiones visibles o el primer input encontrado
+        const visible = inputs.find(i => {
+            const rect = i.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
         });
+        return visible || inputs[0] || null;
+    }
 
-        // Disparar eventos en el orden correcto
+    // Inyectar un lote completo de archivos en el input de WhatsApp Web
+    function injectFilesToWhatsApp(files, isMedia) {
+        if (!files || files.length === 0) return false;
+
+        const input = findTargetInput(isMedia);
+        if (!input) {
+            console.warn('[file-drop] No se encontró input de archivo disponible (media=' + isMedia + ')');
+            return false;
+        }
+
+        // Usar un único DataTransfer con todos los archivos para evitar perder elementos
+        const dataTransfer = new DataTransfer();
+        for (const file of files) {
+            dataTransfer.items.add(file);
+        }
+
+        try {
+            Object.defineProperty(input, 'files', {
+                writable: true,
+                value: dataTransfer.files
+            });
+        } catch (e) {
+            input.files = dataTransfer.files;
+        }
+
+        // Disparar eventos para que React / WhatsApp Web detecte los archivos
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
 
-        console.log('[file-drop] Archivo inyectado:', file.name);
+        console.log('[file-drop] Inyectados ' + files.length + ' archivo(s) (media=' + isMedia + '):',
+                    files.map(f => f.name));
+        return true;
     }
 
     // Inicializar listeners de drag & drop
     function initFileDrop() {
-        window.addEventListener('dragenter', () => {
-            getTargetInput();
-        });
-
         window.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -76,7 +77,7 @@
             }
         });
 
-        window.addEventListener('drop', async (e) => {
+        window.addEventListener('drop', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -85,14 +86,21 @@
             }
 
             const files = Array.from(e.dataTransfer.files);
-            console.log('[file-drop] Archivos detectados:', files.map(f => f.name));
+            console.log('[file-drop] Archivos detectados en drop:', files.map(f => f.name));
 
-            for (const file of files) {
-                try {
-                    await injectFileToWhatsApp(file);
-                } catch (err) {
-                    console.error('[file-drop] Error procesando archivo:', err);
-                }
+            const mediaFiles = files.filter(isMediaFile);
+            const docFiles = files.filter(f => !isMediaFile(f));
+
+            if (mediaFiles.length > 0 && docFiles.length === 0) {
+                injectFilesToWhatsApp(mediaFiles, true);
+            } else if (docFiles.length > 0 && mediaFiles.length === 0) {
+                injectFilesToWhatsApp(docFiles, false);
+            } else {
+                // Lote mixto: inyectar documentos primero y multimedia con breve retraso
+                injectFilesToWhatsApp(docFiles, false);
+                setTimeout(() => {
+                    injectFilesToWhatsApp(mediaFiles, true);
+                }, 300);
             }
         });
     }
@@ -104,5 +112,5 @@
         initFileDrop();
     }
 
-    console.log('[file-drop] Soporte de arrastre activado (v2)');
+    console.log('[file-drop] Soporte de arrastre activado');
 })();
