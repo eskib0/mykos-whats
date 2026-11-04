@@ -74,14 +74,16 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
     connect(m_webView->page(), &QWebEnginePage::permissionRequested,
             this, [](QWebEnginePermission permission) {
-        if (permission.origin().host().contains("whatsapp.com")) {
+        const QString host = permission.origin().host();
+        if (host == "web.whatsapp.com" || host.endsWith(".whatsapp.com")) {
             permission.grant();
         }
     });
 #else
     connect(m_webView->page(), &QWebEnginePage::featurePermissionRequested,
             this, [this](const QUrl &securityOrigin, QWebEnginePage::Feature feature) {
-        if (securityOrigin.host().contains("whatsapp.com")) {
+        const QString host = securityOrigin.host();
+        if (host == "web.whatsapp.com" || host.endsWith(".whatsapp.com")) {
             m_webView->page()->setFeaturePermission(securityOrigin, feature, QWebEnginePage::PermissionGrantedByUser);
         }
     });
