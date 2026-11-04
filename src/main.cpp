@@ -5,13 +5,6 @@
 
 int main(int argc, char *argv[])
 {
-    // Optimizar rendimiento de Chromium en Linux con NVIDIA:
-    // Deshabilitar Vulkan problemático en X11 para usar OpenGL/GLX acelerado por hardware
-    if (qEnvironmentVariableIsEmpty("QTWEBENGINE_CHROMIUM_FLAGS")) {
-        qputenv("QTWEBENGINE_CHROMIUM_FLAGS",
-                "--disable-features=Vulkan --enable-gpu-rasterization --enable-zero-copy");
-    }
-
     QApplication app(argc, argv);
     app.setApplicationName("MyKOS-Whats");
     app.setOrganizationName("MyKOS");
