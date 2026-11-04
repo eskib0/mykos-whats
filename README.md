@@ -5,20 +5,23 @@ Aplicación nativa de Qt6 que envuelve WhatsApp Web con bloqueo local y personal
 ## 🚀 Características
 
 - **Pantalla de bloqueo local:** al arrancar con passcode configurado, el contenido queda oculto hasta introducirlo. Passcode cifrado con PBKDF2-HMAC-SHA256 (100.000 iteraciones; los passcodes antiguos de 10.000 se migran solos al cambiarlos).
+- **Protección contra fuerza bruta (Rate Limiting):** bloqueo temporal exponencial con cuenta atrás tras intentos fallidos consecutivos para evitar ataques automatizados.
+- **Bandeja del sistema (Tray Icon):** integración nativa con el área de notificación de Linux (`QSystemTrayIcon`), minimizado en segundo plano y menú contextual rápido.
+- **Notificaciones de escritorio nativas:** mensajes entrantes integrados con el sistema de notificaciones, protegiendo la privacidad si la aplicación se encuentra bloqueada.
 - **Bloqueo por inactividad:** configurable (1–60 min) y persistente entre sesiones.
 - **Bloqueo manual:** `Ctrl+L` o menú *Configuración → Bloquear ahora*.
 - **Tema oscuro MyKOS:** aplicado sobre WhatsApp Web (variables CSS + reglas de refuerzo).
 - **Watchdog de conexión:** banner offline y recarga con backoff exponencial solo si WhatsApp sigue desconectado.
-- **Polyfills:** arrastrar y soltar archivos (MutationObserver) y recuperación de Service Workers corruptos.
+- **Polyfills:** arrastrar y soltar múltiples archivos (fotos, vídeos y documentos) y recuperación anti-bucle de Service Workers corruptos.
 - **Perfil persistente:** la sesión de WhatsApp sobrevive entre arranques.
 
 ## 🛠️ Requisitos
 
-- Qt 6 (Core, Gui, Widgets, WebEngineWidgets, Network)
+- Qt 6 (Core, Gui, Widgets, WebEngineWidgets, Network, opcionalmente Test)
 - CMake 3.16+
 - GCC o Clang con soporte C++17
 
-## 🔨 Compilación
+## 🔨 Compilación y Tests
 
 ```bash
 chmod +x build.sh
@@ -31,6 +34,7 @@ O manualmente:
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 make -j$(nproc)
+ctest --output-on-failure
 ```
 
 ## ▶️ Ejecución
@@ -46,23 +50,30 @@ whatsie/
 ├── CMakeLists.txt
 ├── build.sh
 ├── README.md
-└── src/
-    ├── main.cpp
-    ├── core/
-    │   ├── app_lock.h
-    │   └── app_lock.cpp
-    ├── ui/
-    │   ├── lockoverlay.h
-    │   ├── lockoverlay.cpp
-    │   ├── mainwindow.h
-    │   └── mainwindow.cpp
-    └── web/
-        └── scripts/
-            ├── activity-tracker.js
-            ├── connection-watchdog.js
-            ├── file-drop.js
-            ├── sw-recovery.js
-            └── theme-control.js
+├── data/
+│   └── mykos-whats.desktop
+├── resources/
+│   └── icons/
+│       └── mykos-whats.png
+├── src/
+│   ├── main.cpp
+│   ├── core/
+│   │   ├── app_lock.h
+│   │   └── app_lock.cpp
+│   ├── ui/
+│   │   ├── lockoverlay.h
+│   │   ├── lockoverlay.cpp
+│   │   ├── mainwindow.h
+│   │   └── mainwindow.cpp
+│   └── web/
+│       └── scripts/
+│           ├── activity-tracker.js
+│           ├── connection-watchdog.js
+│           ├── file-drop.js
+│           ├── sw-recovery.js
+│           └── theme-control.js
+└── tests/
+    └── test_app_lock.cpp
 ```
 
 ## 🔒 Modelo de Seguridad y Limitaciones
