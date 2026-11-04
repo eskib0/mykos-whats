@@ -19,6 +19,7 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QSettings>
 #include <QSpinBox>
 #include <QStackedWidget>
@@ -45,10 +46,22 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     m_profile = new QWebEngineProfile("mykos-whats-profile", this);
     m_profile->setPersistentCookiesPolicy(QWebEngineProfile::ForcePersistentCookies);
 
-    // User-Agent moderno de Chrome: WhatsApp Web bloquea la cadena QtWebEngine
-    // y muestra pantalla de "Actualiza Google Chrome / Navegador no compatible"
-    const QString userAgent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+    // User-Agent: WhatsApp Web bloquea explícitamente cadenas que contengan "QtWebEngine"
+    // o versiones de Chromium antiguas (< 110). Se elimina QtWebEngine y se garantiza una versión moderna.
+    QString userAgent = m_profile->httpUserAgent();
+    userAgent.replace(QRegularExpression(QStringLiteral("QtWebEngine/[^\\s]+\\s*")), QString());
+    QRegularExpression chromeRegex(QStringLiteral("Chrome/(\\d+)\\.([\\d\\.]+)"));
+    QRegularExpressionMatch chromeMatch = chromeRegex.match(userAgent);
+    if (chromeMatch.hasMatch()) {
+        int major = chromeMatch.captured(1).toInt();
+        if (major < 130) {
+            userAgent.replace(chromeMatch.captured(0), QStringLiteral("Chrome/130.0.0.0"));
+        }
+    } else {
+        userAgent += QStringLiteral(" Chrome/130.0.0.0");
+    }
     m_profile->setHttpUserAgent(userAgent);
+    qDebug() << "[MainWindow] User-Agent configurado:" << userAgent;
 
     // Habilitar características necesarias en el motor web
     QWebEngineSettings *s = m_profile->settings();
