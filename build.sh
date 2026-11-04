@@ -14,8 +14,12 @@ echo "🔨 Compilando MyKOS-Whats..."
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-# Configurar con CMake
-cmake .. -DCMAKE_BUILD_TYPE=Release
+# Configurar con CMake (usando Qt 6.11 si está disponible en el entorno)
+if [ -d "/home/ruben/Qt/6.11.3/gcc_64" ]; then
+    cmake .. -DCMAKE_PREFIX_PATH="/home/ruben/Qt/6.11.3/gcc_64" -DCMAKE_BUILD_TYPE=Release
+else
+    cmake .. -DCMAKE_BUILD_TYPE=Release
+fi
 
 # Compilar
 make -j$(nproc)

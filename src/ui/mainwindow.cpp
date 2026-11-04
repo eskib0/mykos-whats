@@ -29,7 +29,9 @@
 #include <QVariant>
 #include <QWebEngineCookieStore>
 #include <QWebEngineNotification>
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
 #include <QWebEnginePermission>
+#endif
 #include <QWebEngineScript>
 #include <QWebEngineScriptCollection>
 #include <QWebEngineSettings>
@@ -77,6 +79,9 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     s->setAttribute(QWebEngineSettings::JavascriptEnabled, true);
     s->setAttribute(QWebEngineSettings::LocalStorageEnabled, true);
     s->setAttribute(QWebEngineSettings::WebGLEnabled, true);
+    s->setAttribute(QWebEngineSettings::Accelerated2dCanvasEnabled, true);
+    s->setAttribute(QWebEngineSettings::JavascriptCanAccessClipboard, true);
+    s->setAttribute(QWebEngineSettings::JavascriptCanPaste, true);
     s->setAttribute(QWebEngineSettings::DnsPrefetchEnabled, true);
     s->setAttribute(QWebEngineSettings::ScrollAnimatorEnabled, true);
     s->setAttribute(QWebEngineSettings::PluginsEnabled, true);

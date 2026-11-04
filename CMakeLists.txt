@@ -7,6 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
+# Si existe Qt moderno en el entorno local (p. ej. Qt 6.11+ con Chromium moderno), priorizarlo
+if(EXISTS "/home/ruben/Qt/6.11.3/gcc_64")
+    list(PREPEND CMAKE_PREFIX_PATH "/home/ruben/Qt/6.11.3/gcc_64")
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS Core Gui WebEngineWidgets Widgets Network)
 find_package(Qt6 OPTIONAL_COMPONENTS Test)
 

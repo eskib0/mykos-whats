@@ -8,12 +8,17 @@
         lastActivity: Date.now()
     };
 
+    let lastMark = 0;
+    function markActivity() {
+        const now = Date.now();
+        if (now - lastMark > 2000) {
+            lastMark = now;
+            window.MyKOSActivity.lastActivity = now;
+        }
+    }
+
     const EVENTS = ['mousemove', 'mousedown', 'mouseup', 'keydown', 'keyup',
                     'wheel', 'touchstart', 'touchmove', 'click', 'scroll', 'input'];
-
-    function markActivity() {
-        window.MyKOSActivity.lastActivity = Date.now();
-    }
 
     EVENTS.forEach(function (ev) {
         window.addEventListener(ev, markActivity, { passive: true, capture: true });

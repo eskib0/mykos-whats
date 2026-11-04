@@ -5,6 +5,12 @@
 
 int main(int argc, char *argv[])
 {
+    // Optimizar rendimiento de Chromium en Linux con aceleración por hardware
+    if (qEnvironmentVariableIsEmpty("QTWEBENGINE_CHROMIUM_FLAGS")) {
+        qputenv("QTWEBENGINE_CHROMIUM_FLAGS",
+                "--enable-gpu-rasterization --enable-zero-copy --disable-gpu-driver-bug-workarounds");
+    }
+
     QApplication app(argc, argv);
     app.setApplicationName("MyKOS-Whats");
     app.setOrganizationName("MyKOS");
