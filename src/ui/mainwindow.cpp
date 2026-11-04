@@ -90,7 +90,7 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     const QString basePath = ":/web/scripts/";
     registerScript("sw-recovery", basePath + "sw-recovery.js", QWebEngineScript::DocumentCreation);
     registerScript("activity-tracker", basePath + "activity-tracker.js", QWebEngineScript::DocumentCreation);
-    registerScript("theme-control", basePath + "theme-control.js", QWebEngineScript::DocumentReady);
+    registerScript("theme-control", basePath + "theme-control.js", QWebEngineScript::DocumentCreation);
     registerScript("file-drop", basePath + "file-drop.js", QWebEngineScript::DocumentReady);
     registerScript("connection-watchdog", basePath + "connection-watchdog.js", QWebEngineScript::DocumentReady);
 

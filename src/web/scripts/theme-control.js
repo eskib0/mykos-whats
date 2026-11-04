@@ -4,11 +4,14 @@
 
     let currentTheme = 'whatsapp-dark'; // 'whatsapp-dark' (defecto), 'mykos', 'whatsapp-light'
 
-    // Estilos MyKOS refinados: solo variables CSS y scrollbars, sin destruir componentes React internos
+    // Estilos MyKOS refinados: variables CSS completas para legibilidad de mensajes, burbujas y scrollbars
     const MYKOS_CSS = `
-        :root.dark, html.dark {
-            --conversation-panel-background: #080e18 !important;
+        :root.dark, html.dark, body.dark {
             --app-background: #080e18 !important;
+            --background-default: #080e18 !important;
+            --background-default-hover: #10243e !important;
+            --background-default-active: #162f50 !important;
+            --conversation-panel-background: #080e18 !important;
             --panel-background: #0f172a !important;
             --panel-background-deeper: #0b1120 !important;
             --panel-header-background: #131e33 !important;
@@ -16,15 +19,33 @@
             --incoming-background-deeper: #172033 !important;
             --outgoing-background: #1e3a5f !important;
             --outgoing-background-deeper: #172d4a !important;
+            --compose-panel-background: #0f172a !important;
+            --compose-input-background: #0b1120 !important;
+            --input-placeholder: #8da6c2 !important;
             --primary: #f8fafc !important;
             --primary-strong: #ffffff !important;
+            --primary-title: #f8fafc !important;
+            --message-primary: #f8fafc !important;
+            --message-secondary: #94a3b8 !important;
             --secondary: #94a3b8 !important;
             --secondary-lighter: #64748b !important;
-            --border-default: #334155 !important;
-            --border-strong: #475569 !important;
+            --border-default: #284c78 !important;
+            --border-strong: #365b87 !important;
             --accent: #38bdf8 !important;
+            --icon: #38bdf8 !important;
             --icon-fixed: #38bdf8 !important;
+            --icon-lighter: #94a3b8 !important;
             --teal: #38bdf8 !important;
+            --intro-background: #080e18 !important;
+        }
+
+        /* Asegurar legibilidad del texto en burbujas y paneles */
+        html.dark body,
+        html.dark #app,
+        html.dark [data-testid="conversation-panel-wrapper"],
+        html.dark [data-testid="cell-frame-container"],
+        html.dark [data-testid="msg-container"] {
+            color: #f4f8ff !important;
         }
 
         /* Scrollbars estilo MyKOS */
@@ -63,6 +84,11 @@
         let style = document.getElementById('mykos-theme-override');
 
         if (currentTheme === 'whatsapp-light') {
+            try {
+                localStorage.setItem('theme', '"light"');
+                localStorage.setItem('system-theme-mode', 'false');
+            } catch(e) {}
+
             docEl.classList.remove('dark');
             docEl.classList.add('light');
             docEl.setAttribute('data-color-mode', 'light');
@@ -73,6 +99,11 @@
             }
             if (style) style.remove();
         } else if (currentTheme === 'mykos') {
+            try {
+                localStorage.setItem('theme', '"dark"');
+                localStorage.setItem('system-theme-mode', 'false');
+            } catch(e) {}
+
             docEl.classList.add('dark');
             docEl.classList.remove('light');
             docEl.setAttribute('data-color-mode', 'dark');
@@ -91,7 +122,12 @@
                 style.textContent = MYKOS_CSS;
             }
         } else {
-            // 'whatsapp-dark' (Modo oscuro oficial de WhatsApp Web: 100% legible y probado)
+            // 'whatsapp-dark' (Modo oscuro oficial de WhatsApp Web: 100% nativo, legible y contrastado)
+            try {
+                localStorage.setItem('theme', '"dark"');
+                localStorage.setItem('system-theme-mode', 'false');
+            } catch(e) {}
+
             docEl.classList.add('dark');
             docEl.classList.remove('light');
             docEl.setAttribute('data-color-mode', 'dark');
@@ -110,24 +146,22 @@
 
         const root = document.documentElement;
         if (root) {
+            let isApplying = false;
             const observer = new MutationObserver(() => {
+                if (isApplying) return;
                 if (currentTheme !== 'whatsapp-light') {
-                    const isDark = document.documentElement.classList.contains('dark') &&
-                                   document.documentElement.getAttribute('data-color-mode') === 'dark';
+                    const isDark = document.documentElement.classList.contains('dark');
                     if (!isDark) {
-                        observer.disconnect();
+                        isApplying = true;
                         applyTheme();
-                        observer.observe(root, {
-                            attributes: true,
-                            attributeFilter: ['class', 'data-color-mode']
-                        });
+                        isApplying = false;
                     }
                 }
             });
 
             observer.observe(root, {
                 attributes: true,
-                attributeFilter: ['class', 'data-color-mode']
+                attributeFilter: ['class']
             });
         }
 
@@ -135,7 +169,7 @@
             setTheme: applyTheme,
             forceTheme: () => applyTheme(),
             getTheme: () => currentTheme,
-            version: '2026.11.03-mykos-v4'
+            version: '2026.11.04-mykos-v5'
         };
     }
 
