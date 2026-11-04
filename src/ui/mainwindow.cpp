@@ -79,7 +79,7 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
     s->setAttribute(QWebEngineSettings::JavascriptEnabled, true);
     s->setAttribute(QWebEngineSettings::LocalStorageEnabled, true);
     s->setAttribute(QWebEngineSettings::WebGLEnabled, true);
-    s->setAttribute(QWebEngineSettings::Accelerated2dCanvasEnabled, true);
+    s->setAttribute(QWebEngineSettings::Accelerated2dCanvasEnabled, false);
     s->setAttribute(QWebEngineSettings::JavascriptCanAccessClipboard, true);
     s->setAttribute(QWebEngineSettings::JavascriptCanPaste, true);
     s->setAttribute(QWebEngineSettings::DnsPrefetchEnabled, true);
