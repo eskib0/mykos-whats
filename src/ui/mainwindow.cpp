@@ -385,11 +385,17 @@ void MainWindow::handleWebNotification(std::unique_ptr<QWebEngineNotification> n
 
 void MainWindow::refreshLockState()
 {
-    m_stack->setCurrentWidget(m_lock->isUnlocked() ? static_cast<QWidget *>(m_webView)
-                                                   : static_cast<QWidget *>(m_overlay));
-    const bool canLock = m_lock->hasPasscode() && m_lock->isUnlocked();
-    m_actLockNow->setEnabled(canLock);
-    m_actRemovePasscode->setEnabled(m_lock->hasPasscode());
+    if (m_stack) {
+        m_stack->setCurrentWidget(m_lock->isUnlocked() ? static_cast<QWidget *>(m_webView)
+                                                       : static_cast<QWidget *>(m_overlay));
+    }
+    const bool canLock = m_lock && m_lock->hasPasscode() && m_lock->isUnlocked();
+    if (m_actLockNow) {
+        m_actLockNow->setEnabled(canLock);
+    }
+    if (m_actRemovePasscode) {
+        m_actRemovePasscode->setEnabled(m_lock && m_lock->hasPasscode());
+    }
     if (m_actTrayLock) {
         m_actTrayLock->setEnabled(canLock);
     }
