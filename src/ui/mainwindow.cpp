@@ -259,11 +259,30 @@ void MainWindow::refreshLockState()
 
 void MainWindow::tryUnlock(const QString &passcode)
 {
+    if (m_overlay && m_overlay->isLockedOut()) return;
+
     if (m_lock->verifyPasscode(passcode)) {
+        m_failedAttempts = 0;
         m_lock->unlock();
         refreshLockState();
     } else {
-        m_overlay->showError("Contraseña incorrecta.");
+        m_failedAttempts++;
+        int lockoutSec = 0;
+        if (m_failedAttempts >= 6) {
+            lockoutSec = 30;
+        } else if (m_failedAttempts == 5) {
+            lockoutSec = 15;
+        } else if (m_failedAttempts == 4) {
+            lockoutSec = 5;
+        } else if (m_failedAttempts == 3) {
+            lockoutSec = 2;
+        }
+
+        if (lockoutSec > 0) {
+            m_overlay->setLockedOut(lockoutSec);
+        } else {
+            m_overlay->showError(QString("Contraseña incorrecta (intento %1).").arg(m_failedAttempts));
+        }
     }
 }
 

@@ -48,6 +48,7 @@ private:
     QWebEngineView *m_webView = nullptr;
     QWebEngineProfile *m_profile = nullptr;
     AppLock *m_lock = nullptr;
+    int m_failedAttempts = 0;
     QTimer *m_inactivityTimer = nullptr;
     qint64 m_inactivityTimeoutMs = 5 * 60 * 1000LL;
     qint64 m_lastNativeActivity = 0;

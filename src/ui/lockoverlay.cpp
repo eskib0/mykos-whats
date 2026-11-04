@@ -4,6 +4,7 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QShowEvent>
+#include <QTimer>
 #include <QVBoxLayout>
 
 LockOverlay::LockOverlay(QWidget *parent) : QWidget(parent)
@@ -16,10 +17,12 @@ LockOverlay::LockOverlay(QWidget *parent) : QWidget(parent)
         "QLineEdit { background-color: #06101e; color: #f4f8ff; border: 1px solid #284c78;"
         "            border-radius: 6px; padding: 8px 12px; font-size: 14px; }"
         "QLineEdit:focus { border: 1px solid #4fa8ff; }"
+        "QLineEdit:disabled { background-color: #030810; color: #475569; border: 1px solid #1e293b; }"
         "QPushButton { background-color: #0a172a; color: #f4f8ff; border: 1px solid #284c78;"
         "              border-radius: 6px; padding: 8px 16px; }"
         "QPushButton:hover { background-color: #10243e; }"
         "QPushButton:pressed { background-color: #162f50; }"
+        "QPushButton:disabled { background-color: #030810; color: #475569; border: 1px solid #1e293b; }"
     );
 
     QVBoxLayout *layout = new QVBoxLayout(this);
@@ -48,16 +51,16 @@ LockOverlay::LockOverlay(QWidget *parent) : QWidget(parent)
     m_input->setMinimumHeight(36);
     layout->addWidget(m_input, 0, Qt::AlignCenter);
 
-    QPushButton *button = new QPushButton("Desbloquear", this);
-    button->setMaximumWidth(320);
-    button->setCursor(Qt::PointingHandCursor);
-    layout->addWidget(button, 0, Qt::AlignCenter);
+    m_button = new QPushButton("Desbloquear", this);
+    m_button->setMaximumWidth(320);
+    m_button->setCursor(Qt::PointingHandCursor);
+    layout->addWidget(m_button, 0, Qt::AlignCenter);
 
-    QPushButton *btnReset = new QPushButton("¿Olvidaste tu contraseña?", this);
-    btnReset->setCursor(Qt::PointingHandCursor);
-    btnReset->setStyleSheet("QPushButton { background: transparent; border: none; color: #8da6c2; font-size: 12px; text-decoration: underline; padding: 6px; }"
+    m_btnReset = new QPushButton("¿Olvidaste tu contraseña?", this);
+    m_btnReset->setCursor(Qt::PointingHandCursor);
+    m_btnReset->setStyleSheet("QPushButton { background: transparent; border: none; color: #8da6c2; font-size: 12px; text-decoration: underline; padding: 6px; }"
                            "QPushButton:hover { color: #4fa8ff; }");
-    layout->addWidget(btnReset, 0, Qt::AlignCenter);
+    layout->addWidget(m_btnReset, 0, Qt::AlignCenter);
 
     m_error = new QLabel(this);
     m_error->setObjectName("lockError");
@@ -67,8 +70,11 @@ LockOverlay::LockOverlay(QWidget *parent) : QWidget(parent)
 
     layout->addStretch();
 
-    connect(button, &QPushButton::clicked, this, &LockOverlay::emitUnlock);
-    connect(btnReset, &QPushButton::clicked, this, &LockOverlay::resetRequested);
+    m_lockoutTimer = new QTimer(this);
+    connect(m_lockoutTimer, &QTimer::timeout, this, &LockOverlay::updateLockoutCountdown);
+
+    connect(m_button, &QPushButton::clicked, this, &LockOverlay::emitUnlock);
+    connect(m_btnReset, &QPushButton::clicked, this, &LockOverlay::resetRequested);
     connect(m_input, &QLineEdit::returnPressed, this, &LockOverlay::emitUnlock);
 }
 
@@ -80,16 +86,53 @@ void LockOverlay::showError(const QString &message)
     m_input->setFocus();
 }
 
+void LockOverlay::setLockedOut(int seconds)
+{
+    if (seconds <= 0) return;
+    m_lockoutSecondsRemaining = seconds;
+    m_input->setEnabled(false);
+    m_button->setEnabled(false);
+    m_error->setText(QString("Demasiados intentos fallidos. Espera %1 s...").arg(m_lockoutSecondsRemaining));
+    m_error->show();
+    m_lockoutTimer->start(1000);
+}
+
+bool LockOverlay::isLockedOut() const
+{
+    return m_lockoutSecondsRemaining > 0;
+}
+
+void LockOverlay::updateLockoutCountdown()
+{
+    m_lockoutSecondsRemaining--;
+    if (m_lockoutSecondsRemaining <= 0) {
+        m_lockoutTimer->stop();
+        m_lockoutSecondsRemaining = 0;
+        m_input->setEnabled(true);
+        m_button->setEnabled(true);
+        m_error->hide();
+        m_input->clear();
+        m_input->setFocus();
+    } else {
+        m_error->setText(QString("Demasiados intentos fallidos. Espera %1 s...").arg(m_lockoutSecondsRemaining));
+    }
+}
+
 void LockOverlay::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-    m_input->clear();
-    m_error->hide();
-    m_input->setFocus();
+    if (m_lockoutSecondsRemaining <= 0) {
+        m_input->setEnabled(true);
+        m_button->setEnabled(true);
+        m_input->clear();
+        m_error->hide();
+        m_input->setFocus();
+    }
 }
 
 void LockOverlay::emitUnlock()
 {
+    if (m_lockoutSecondsRemaining > 0) return;
     const QString passcode = m_input->text();
     if (passcode.isEmpty()) {
         showError("Introduce tu contraseña.");
