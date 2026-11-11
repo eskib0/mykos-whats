@@ -1,0 +1,41 @@
+name: MyKOS-Whats CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Instalar dependencias Qt6 y herramientas de compilación
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          qt6-base-dev \
+          qt6-webengine-dev \
+          qt6-tools-dev \
+          libgl1-mesa-dev
+
+    - name: Configurar CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+
+    - name: Compilar
+      run: |
+        cd build
+        make -j$(nproc)
+
+    - name: Ejecutar Tests Unitarios
+      run: |
+        cd build
+        ctest --output-on-failure

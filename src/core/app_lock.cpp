@@ -4,6 +4,7 @@
 #include <QRandomGenerator>
 #include <QStandardPaths>
 #include <QSettings>
+#include <QFile>
 #include <QDebug>
 #include <QDir>
 
@@ -25,6 +26,15 @@ bool AppLock::loadConfig()
     m_salt = settings.value("salt").toByteArray();
     // Configs antiguas no guardaban "iterations": se asume el valor legacy (10k)
     m_iterations = settings.value("iterations", LEGACY_ITERATIONS).toInt();
+    settings.endGroup();
+
+#if defined(Q_OS_UNIX)
+    QString fileName = settings.fileName();
+    if (!fileName.isEmpty() && QFile::exists(fileName)) {
+        // Blindaje de permisos 0600 (solo lectura y escritura para el propietario)
+        QFile::setPermissions(fileName, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    }
+#endif
 
     if (m_hash.isEmpty() || m_salt.isEmpty()) {
         m_hash = QByteArray();
@@ -56,6 +66,13 @@ bool AppLock::saveConfig()
         qWarning() << "Error al guardar configuración de seguridad en QSettings:" << settings.status();
     } else {
         qDebug() << "Configuración guardada correctamente.";
+#if defined(Q_OS_UNIX)
+        QString fileName = settings.fileName();
+        if (!fileName.isEmpty() && QFile::exists(fileName)) {
+            // Blindaje estricto 0600 tras guardar
+            QFile::setPermissions(fileName, QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        }
+#endif
     }
     return ok;
 }
@@ -110,12 +127,17 @@ bool AppLock::verifyPasscode(const QString &passcode)
     if (m_hash.isEmpty()) return true; // Sin passcode configurado
     QByteArray test = deriveHash(passcode, m_salt, m_iterations);
     // Comparación en tiempo constante para evitar ataques de temporización
-    if (test.size() != m_hash.size()) return false;
+    if (test.size() != m_hash.size()) {
+        test.fill('\0');
+        return false;
+    }
     volatile quint8 diff = 0;
     const int n = test.size();
     for (int i = 0; i < n; ++i) {
         diff |= static_cast<quint8>(test[i] ^ m_hash[i]);
     }
+    // Zeroing del buffer derivado en memoria
+    test.fill('\0');
     return diff == 0;
 }
 

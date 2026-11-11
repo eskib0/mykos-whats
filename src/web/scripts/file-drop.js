@@ -1,9 +1,14 @@
-// file-drop.js - Soporte mejorado para arrastrar y soltar archivos
-// Soporta múltiples archivos simultáneos y distingue entre multimedia y documentos
+// file-drop.js - Soporte mejorado para arrastrar y soltar archivos en MyKOS-Whats
+// NOTA DE MANTENIMIENTO:
+// WhatsApp Web gestiona inputs ocultos tipo 'file' para adjuntar multimedia o documentos.
+// Puntos sensibles a vigilar ante cambios de DOM en WhatsApp:
+// 1. Selector 'input[type="file"]': WhatsApp podría mover los inputs a Shadow DOM.
+// 2. Atributo 'accept': distingue 'image,video' de otros documentos.
+// 3. Inyección DataTransfer: React espera eventos 'input' y 'change' para registrar la carga.
 (function() {
     'use strict';
 
-    console.log('[file-drop] Inicializando soporte de arrastre de archivos...');
+    console.log('[file-drop] Inicializando soporte de arrastre de archivos MyKOS...');
 
     function isMediaFile(file) {
         if (!file || !file.type) return false;
@@ -13,7 +18,10 @@
     // Buscar el input de archivos adecuado según el tipo (multimedia vs documento)
     function findTargetInput(isMedia) {
         const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
-        if (inputs.length === 0) return null;
+        if (inputs.length === 0) {
+            console.warn('[file-drop] DIAGNÓSTICO: No hay inputs[type="file"] en el DOM.');
+            return null;
+        }
 
         if (isMedia) {
             // Input de fotos y vídeos (accept contiene "image" o "video")
@@ -30,7 +38,12 @@
             const rect = i.getBoundingClientRect();
             return rect.width > 0 && rect.height > 0;
         });
-        return visible || inputs[0] || null;
+        if (visible) {
+            console.log('[file-drop] Usando fallback de input visible.');
+            return visible;
+        }
+        console.log('[file-drop] Usando primer input disponible.');
+        return inputs[0] || null;
     }
 
     // Inyectar un lote completo de archivos en el input de WhatsApp Web
