@@ -4,6 +4,16 @@
 
     let currentTheme = 'whatsapp-dark'; // 'whatsapp-dark' (defecto), 'mykos', 'whatsapp-light'
 
+    // Transición suave entre temas (200ms para todos los cambios de color/fondo)
+    const TRANSITION_CSS = `
+        html, body, #app,
+        [data-testid="conversation-panel-wrapper"],
+        [data-testid="cell-frame-container"],
+        [data-testid="msg-container"] {
+            transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease !important;
+        }
+    `;
+
     // Estilos MyKOS refinados: variables CSS completas para legibilidad de mensajes, burbujas y scrollbars
     const MYKOS_CSS = `
         :root.dark, html.dark, body.dark {
@@ -142,13 +152,23 @@
     }
 
     function init() {
+        // Inyectar hoja de transiciones (siempre activa, independiente del tema)
+        let transitionStyle = document.getElementById('mykos-theme-transition');
+        if (!transitionStyle) {
+            transitionStyle = document.createElement('style');
+            transitionStyle.id = 'mykos-theme-transition';
+            const target = document.head || document.documentElement || document.body;
+            if (target) target.appendChild(transitionStyle);
+        }
+        if (transitionStyle) transitionStyle.textContent = TRANSITION_CSS;
+
         applyTheme();
 
         window.MyKOSTheme = {
             setTheme: applyTheme,
             forceTheme: () => applyTheme(),
             getTheme: () => currentTheme,
-            version: '2026.11.04-mykos-v6'
+            version: '2026.11.12-mykos-v7'
         };
     }
 

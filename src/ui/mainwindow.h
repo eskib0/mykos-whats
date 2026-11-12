@@ -7,6 +7,7 @@
 #include <QWebEngineScript>
 #include <QWebEngineScriptCollection>
 #include <QWebEngineSettings>
+#include <QWebChannel>
 #include <QTimer>
 #include <QSettings>
 #include <QSystemTrayIcon>
@@ -16,6 +17,22 @@
 class LockOverlay;
 class QStackedWidget;
 class QWebEngineNotification;
+
+// Bridge QObject para recibir estado de conexión desde JS vía QWebChannel
+class ConnectionBridge : public QObject
+{
+    Q_OBJECT
+public:
+    explicit ConnectionBridge(QObject *parent = nullptr) : QObject(parent) {}
+
+signals:
+    void connectionStatusChanged(const QString &status);
+
+public slots:
+    void setStatus(const QString &status) {
+        emit connectionStatusChanged(status);
+    }
+};
 
 class MainWindow : public QMainWindow
 {
@@ -39,6 +56,7 @@ private slots:
     void tryUnlock(const QString &passcode);
     void setTheme(const QString &themeName);
     void onTrayIconActivated(QSystemTrayIcon::ActivationReason reason);
+    void updateTrayConnectionStatus(const QString &status);
 
 private:
     void applyMyKOSPalette();
@@ -81,6 +99,11 @@ private:
     QAction *m_actTrayToggle = nullptr;
     QAction *m_actTrayLock = nullptr;
     std::shared_ptr<QWebEngineNotification> m_lastNotification;
+
+    // Bridge de conexión JS↔C++ para estado en tray
+    ConnectionBridge *m_connectionBridge = nullptr;
+    QWebChannel *m_webChannel = nullptr;
+    bool m_isConnected = true;
 };
 
 #endif // MAINWINDOW_H

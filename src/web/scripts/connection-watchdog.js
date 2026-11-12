@@ -2,6 +2,7 @@
 // Usa navigator.onLine + detección del estado en el DOM de WhatsApp.
 // No se parchea WebSocket: la inyección tardía no afecta a sockets ya
 // creados por el bundle de WhatsApp ni a los que vivan en Workers.
+// Envía estado al C++ vía QWebChannel para indicador en bandeja del sistema.
 (function() {
     'use strict';
 
@@ -10,6 +11,22 @@
     let lastStatus = navigator.onLine ? 'online' : 'offline';
     let reconnectAttempts = 0;
     const MAX_RECONNECT_ATTEMPTS = 5;
+
+    // Enviar estado de conexión al bridge C++ vía QWebChannel
+    // El bridge puede no estar disponible inmediatamente tras DocumentReady;
+    // se reintenta brevemente si es necesario.
+    let bridgeReady = false;
+    function notifyBridge(status) {
+        if (bridgeReady && window.connectionBridge && typeof window.connectionBridge.setStatus === 'function') {
+            window.connectionBridge.setStatus(status);
+            return;
+        }
+        // Intentar detectar el bridge (QWebChannel lo expone en MainWorld)
+        if (window.connectionBridge && typeof window.connectionBridge.setStatus === 'function') {
+            bridgeReady = true;
+            window.connectionBridge.setStatus(status);
+        }
+    }
 
     // Detectar si WhatsApp muestra pantalla de "conectando" / error de conexión
     function isWhatsAppDisconnected() {
@@ -71,13 +88,15 @@
     // Monitor de estado de conexión del navegador
     function checkConnectionStatus() {
         const online = navigator.onLine;
-        const status = online ? 'online' : 'offline';
+        const disconnected = isWhatsAppDisconnected();
+        const status = (online && !disconnected) ? 'online' : 'offline';
 
         if (status !== lastStatus) {
             console.log('[connection-watchdog] Cambio de estado:', status);
             lastStatus = status;
+            notifyBridge(status);
 
-            if (!online) {
+            if (!online || disconnected) {
                 showOfflineBanner();
             } else {
                 hideOfflineBanner();
@@ -106,7 +125,8 @@
     if (!navigator.onLine) {
         showOfflineBanner();
     }
-    checkConnectionStatus();
+    const initialStatus = checkConnectionStatus();
+    notifyBridge(initialStatus);
 
     console.log('[connection-watchdog] Monitor de conexión activado');
 })();

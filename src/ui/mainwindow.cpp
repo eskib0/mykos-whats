@@ -21,6 +21,8 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPainter>
+#include <QPixmap>
 #include <QRegularExpression>
 #include <QSettings>
 #include <QSpinBox>
@@ -115,6 +117,15 @@ MainWindow::MainWindow(AppLock *lock, QWidget *parent)
         }
     });
 #endif
+
+    // Configurar QWebChannel para comunicación JS→C++ (estado de conexión en tray)
+    m_connectionBridge = new ConnectionBridge(this);
+    m_webChannel = new QWebChannel(this);
+    m_webChannel->registerObject(QStringLiteral("connectionBridge"), m_connectionBridge);
+    m_webView->page()->setWebChannel(m_webChannel);
+
+    connect(m_connectionBridge, &ConnectionBridge::connectionStatusChanged,
+            this, &MainWindow::updateTrayConnectionStatus);
 
     m_webView->setUrl(QUrl("https://web.whatsapp.com/"));
 
@@ -358,6 +369,39 @@ void MainWindow::onTrayIconActivated(QSystemTrayIcon::ActivationReason reason)
             raise();
             activateWindow();
         }
+    }
+}
+
+void MainWindow::updateTrayConnectionStatus(const QString &status)
+{
+    const bool connected = (status == "online");
+    if (connected == m_isConnected) return;
+    m_isConnected = connected;
+
+    if (!m_trayIcon) return;
+
+    if (connected) {
+        m_trayIcon->setIcon(QIcon(":/icons/app.png"));
+        m_trayIcon->setToolTip("MyKOS-Whats");
+        qDebug() << "[MainWindow] Tray: conexión restaurada";
+    } else {
+        // Icono con indicador rojo de desconexión
+        QPixmap base(64, 64);
+        base.fill(Qt::transparent);
+        QPainter painter(&base);
+        painter.setRenderHint(QPainter::Antialiasing);
+        // Dibujar icono base escalado
+        QIcon appIcon(":/icons/app.png");
+        QPixmap appPix = appIcon.pixmap(48, 48);
+        painter.drawPixmap(0, 0, 48, 48, appPix);
+        // Punto rojo en esquina inferior derecha
+        painter.setBrush(QColor("#ef4444"));
+        painter.setPen(Qt::NoPen);
+        painter.drawEllipse(40, 40, 20, 20);
+        painter.end();
+        m_trayIcon->setIcon(QIcon(base));
+        m_trayIcon->setToolTip("MyKOS-Whats — Sin conexión");
+        qDebug() << "[MainWindow] Tray: sin conexión";
     }
 }
 
