@@ -5,12 +5,14 @@
 
 int main(int argc, char *argv[])
 {
+#if defined(Q_OS_LINUX)
     // En Linux con NVIDIA y memoria VRAM limitada/compartida, Chromium colapsa en un bucle
     // infinito de Skia OOM al intentar compositar por GPU. '--disable-gpu-compositing'
     // previene el bucle de saturación al 100% de CPU manteniendo fluidez total.
     if (qEnvironmentVariableIsEmpty("QTWEBENGINE_CHROMIUM_FLAGS")) {
         qputenv("QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu-compositing");
     }
+#endif
 
     QApplication app(argc, argv);
     app.setApplicationName("MyKOS-Whats");

@@ -1,0 +1,115 @@
+name: "Compilar y Publicar Instaladores Oficiales (Linux y Windows)"
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Etiqueta de la release (por ejemplo, v1.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux-deb:
+    name: "Empaquetar instalador Linux (.deb)"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Descargar repositorio"
+        uses: actions/checkout@v4
+
+      - name: "Instalar dependencias Qt6 y herramientas"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            build-essential \
+            qt6-base-dev \
+            qt6-webengine-dev \
+            qt6-tools-dev \
+            libgl1-mesa-dev
+
+      - name: "Construir paquete .deb"
+        run: |
+          chmod +x packaging/linux/build-deb.sh
+          ./packaging/linux/build-deb.sh
+
+      - name: "Subir artefacto Debian"
+        uses: actions/upload-artifact@v4
+        with:
+          name: mykos-whats-linux-deb
+          path: dist/*.deb
+
+  build-windows-exe:
+    name: "Empaquetar instalador Windows (.exe)"
+    runs-on: windows-latest
+    steps:
+      - name: "Descargar repositorio"
+        uses: actions/checkout@v4
+
+      - name: "Configurar MSVC"
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: "Configurar Qt 6 con WebEngine"
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.0'
+          arch: 'win64_msvc2022_64'
+          modules: 'qtwebengine'
+
+      - name: "Configurar Inno Setup"
+        run: choco install innosetup --no-progress
+
+      - name: "Compilar e Inno Setup"
+        shell: pwsh
+        run: |
+          ./packaging/windows/build-installer.ps1
+
+      - name: "Subir artefacto Windows"
+        uses: actions/upload-artifact@v4
+        with:
+          name: mykos-whats-windows-setup
+          path: dist/*.exe
+
+  publish-release:
+    name: "Publicar en GitHub Releases"
+    needs: [build-linux-deb, build-windows-exe]
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Descargar repositorio"
+        uses: actions/checkout@v4
+
+      - name: "Descargar instalador Linux"
+        uses: actions/download-artifact@v4
+        with:
+          name: mykos-whats-linux-deb
+          path: release-assets
+
+      - name: "Descargar instalador Windows"
+        uses: actions/download-artifact@v4
+        with:
+          name: mykos-whats-windows-setup
+          path: release-assets
+
+      - name: "Obtener etiqueta de la versión"
+        id: get_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Publicar Release oficial en GitHub"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: "MyKOS-Whats ${{ steps.get_tag.outputs.tag }}"
+          files: release-assets/*
+          generate_release_notes: true
+          draft: false
+          prerelease: false
